@@ -32,7 +32,7 @@
 
     <header class="bg-[#1e1e1e] border-b border-[#2e2e2e] pt-4 pb-3 px-4 sticky top-0 z-10 shadow-md flex flex-col gap-3">
         <div class="flex justify-between items-center">
-            <h1 class="text-xl font-bold text-white flex items-center gap-2">📚 漫畫閣 <span class="text-xs text-gray-500 font-normal">v3.4</span></h1>
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">📚 漫畫閣 <span class="text-xs text-gray-500 font-normal">v3.5</span></h1>
             <div class="flex gap-2">
                 <button onclick="openScanner()" class="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-full text-xs font-bold transition-all shadow shadow-blue-900">
                     📷 掃碼
@@ -152,7 +152,7 @@
     </div>
 
     <script>
-        // 原始 Excel 62 部漫畫資料
+        // 原始 62 部漫畫基礎資料 (已全數修正語法)
         const excelData = [
             { title: "金牌得主", publisher: "東立", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "" },
             { title: "龍與變色龍", publisher: "東立", status: "連載中", max: 5, owned: "1-5", isbn: "", cover: "" },
@@ -179,7 +179,7 @@
             { title: "cosmos銀河金融保險公司", publisher: "東立", status: "連載中", max: 4, owned: "1-4", isbn: "", cover: "" },
             { title: "營繕師異譚", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
             { title: "夏日時光（完）", publisher: "東立", status: "已完結", max: 13, owned: "1-13", isbn: "", cover: "" },
-            { title: "非法稀有種（完")", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "" },
+            { title: "非法稀有種（完）", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "" },
             { title: "結界師(完全版）（完）", publisher: "東立", status: "已完結", max: 18, owned: "1-18", isbn: "", cover: "" },
             { title: "排球少年（完）", publisher: "東立", status: "已完結", max: 45, owned: "1-45", isbn: "", cover: "" },
             { title: "暗殺教室（完）", publisher: "東立", status: "已完結", max: 21, owned: "1-21", isbn: "", cover: "" },
@@ -220,7 +220,7 @@
 
         let catalog = []; let wishlist = {}; let currentView = "collection"; let currentPublisher = "全部"; 
         let html5QrcodeScanner = null;
-        let currentFacingMode = "environment"; // 預設後鏡頭
+        let currentFacingMode = "environment"; 
 
         function parseVolumes(str) {
             if (!str) return [];
@@ -278,7 +278,7 @@
                 localStorage.setItem('comic_wishlist_v3', JSON.stringify(wishlist));
                 updateWishlistBadge();
             } catch(e) {
-                alert("⚠️ 儲存失敗！可能是舊的圖片檔案佔滿了空間，請點擊「備份資料」後，清除瀏覽器快取再還原文字檔。");
+                alert("⚠️ 儲存失敗！可能是之前的舊大圖檔佔滿了空間，請備份資料後，至手機設定中清除此網站的舊資料。");
             }
         }
 
@@ -367,7 +367,6 @@
             reader.readAsText(file);
         }
 
-        // ================= 🛠️ 鏡頭核心修改：支援一鍵強制翻轉鏡頭 =================
         function startCamera() {
             if (html5QrcodeScanner) {
                 html5QrcodeScanner.start(
@@ -403,11 +402,9 @@
         function openScanner() {
             document.getElementById('scanner-modal').classList.remove('hidden');
             document.getElementById('scanner-result').textContent = "正在連線相機硬體...";
-            
             html5QrcodeScanner = new Html5Qrcode("interactive", {
                 formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8 ]
             });
-            
             startCamera();
         }
 
@@ -415,7 +412,6 @@
             if (html5QrcodeScanner) {
                 document.getElementById('scanner-result').textContent = "正在切換鏡頭中...";
                 html5QrcodeScanner.stop().then(() => {
-                    // 翻轉邏輯
                     currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
                     startCamera();
                 }).catch(err => {
@@ -433,7 +429,6 @@
             } else { document.getElementById('scanner-modal').classList.add('hidden'); }
         }
 
-        // ================= 圖片預覽邏輯 =================
         function previewUrlImage() {
             const url = document.getElementById('form-cover-url').value.trim();
             const preview = document.getElementById('cover-preview');
@@ -481,7 +476,6 @@
                     const card = document.createElement('div');
                     card.className = "bg-[#1e1e1e] p-3 rounded-xl border border-[#2e2e2e] flex gap-3 shadow-md relative items-center";
                     
-                    // 支援舊的 Base64 或是新的圖片網址
                     let coverHtml = comic.cover 
                         ? `<img src="${comic.cover}" class="w-16 h-24 object-cover rounded shadow-inner bg-gray-800 shrink-0" onerror="this.src=''">`
                         : `<div class="w-16 h-24 bg-gradient-to-br from-gray-700 to-gray-800 rounded flex items-center justify-center text-[10px] text-gray-500 text-center p-1 font-bold shrink-0">No Cover</div>`;
@@ -577,7 +571,6 @@
             document.getElementById('form-publisher').value = comic.publisher; document.getElementById('form-status').value = comic.status || "連載中";
             document.getElementById('form-max').value = comic.max || ""; document.getElementById('form-volumes').value = comic.owned;
             document.getElementById('form-isbn').value = comic.isbn || "";
-            
             document.getElementById('form-cover-url').value = comic.cover || "";
             previewUrlImage();
             document.getElementById('add-modal').classList.remove('hidden');
