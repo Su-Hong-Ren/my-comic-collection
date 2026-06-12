@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="漫畫收藏">
-    <link rel="apple-touch-icon" href="https://img.icons8.com/fluent/512/comic-book.png">
+    <link class="apple-touch-icon" href="https://img.icons8.com/fluent/512/comic-book.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -32,7 +32,7 @@
 
     <header class="bg-[#1e1e1e] border-b border-[#2e2e2e] pt-4 pb-3 px-4 sticky top-0 z-10 shadow-md flex flex-col gap-3">
         <div class="flex justify-between items-center">
-            <h1 class="text-xl font-bold text-white flex items-center gap-2">📚 漫畫閣 <span class="text-xs text-gray-500 font-normal">v3.6</span></h1>
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">📚 漫畫閣 <span class="text-xs text-gray-500 font-normal">v3.7</span></h1>
             <div class="flex gap-2">
                 <button onclick="openScanner()" class="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-full text-xs font-bold transition-all shadow shadow-blue-900">
                     📷 掃碼
@@ -52,7 +52,7 @@
         
         <div class="flex gap-2">
             <div class="relative flex-1">
-                <input type="text" id="search-input" oninput="handleSearchInput()" placeholder="搜尋書名或出版社..." class="w-full bg-[#2d2d2d] text-white text-sm rounded-lg px-3 py-2 pl-9 focus:outline-none focus:ring-2 focus:ring-[#ff4757] border border-[#3e3e3e]">
+                <input type="text" id="search-input" oninput="handleSearchInput()" placeholder="搜尋書名、出版社、作者..." class="w-full bg-[#2d2d2d] text-white text-sm rounded-lg px-3 py-2 pl-9 focus:outline-none focus:ring-2 focus:ring-[#ff4757] border border-[#3e3e3e]">
                 <span class="absolute left-3 top-2.5 text-gray-500 text-sm">🔍</span>
             </div>
             <div class="bg-[#2d2d2d] rounded-lg p-0.5 flex border border-[#3e3e3e]">
@@ -84,6 +84,10 @@
                     <label class="block text-gray-400 mb-1">漫畫書名 *</label>
                     <input type="hidden" id="form-old-title">
                     <input type="text" id="form-title" placeholder="例如：鏈鋸人" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">漫畫作者</label>
+                    <input type="text" id="form-author" placeholder="例如：藤本樹" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
@@ -153,85 +157,83 @@
     </div>
 
     <script>
-        // 原始 62 部漫畫基礎資料
+        // 原始基礎資料庫（🛠️ 已預填寫熱門作品的作者標籤以方便對齊）
         const excelData = [
-            { title: "金牌得主", publisher: "東立", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "" },
-            { title: "龍與變色龍", publisher: "東立", status: "連載中", max: 5, owned: "1-5", isbn: "", cover: "" },
-            { title: "鏈鋸人", publisher: "東立", status: "連載中", max: 22, owned: "1-22", isbn: "", cover: "" },
-            { title: "妖精尾巴百年任務", publisher: "東立", status: "連載中", max: 17, owned: "1-17", isbn: "", cover: "" },
-            { title: "廢淵戰鬼", publisher: "東立", status: "連載中", max: 17, owned: "1-17", isbn: "", cover: "" },
-            { title: "朱音落語", publisher: "東立", status: "連載中", max: 20, owned: "1-20", isbn: "", cover: "" },
-            { title: "天國大魔境", publisher: "東立", status: "連載中", max: 11, owned: "1-11", isbn: "", cover: "" },
-            { title: "膽大黨", publisher: "東立", status: "連載中", max: 22, owned: "1-22", isbn: "", cover: "" },
-            { title: "境界觸發者", publisher: "東立", status: "連載中", max: 29, owned: "1-29", isbn: "", cover: "" },
-            { title: "葬送的芙莉蓮", publisher: "東立", status: "連載中", max: 15, owned: "1-15", isbn: "", cover: "" },
-            { title: "藍色時期", publisher: "東立", status: "連載中", max: 18, owned: "1-18", isbn: "", cover: "" },
-            { title: "青春之箱", publisher: "東立", status: "連載中", max: 23, owned: "1-23", isbn: "", cover: "" },
-            { title: "板本日常", publisher: "東立", status: "連載中", max: 25, owned: "1-25", isbn: "", cover: "" },
-            { title: "炎炎消防隊（完）", publisher: "東立", status: "已完結", max: 34, owned: "1-34", isbn: "", cover: "" },
-            { title: "炎拳（完）", publisher: "東立", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "" },
-            { title: "驀然回首（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "再見繪梨（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "五等分的花嫁（完全版）", publisher: "東立", status: "已完結", max: 7, owned: "1-7", isbn: "", cover: "" },
-            { title: "寄身獸（完全版）", publisher: "東立", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "" },
-            { title: "藤本樹短篇集 17-21、22-26", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "海波追尋的終幕", publisher: "東立", status: "連載中", max: 5, owned: "1-5", isbn: "", cover: "" },
-            { title: "一之瀨家的大罪（完）", publisher: "東立", status: "已完結", max: 6, owned: "1-6", isbn: "", cover: "" },
-            { title: "cosmos銀河金融保險公司", publisher: "東立", status: "連載中", max: 4, owned: "1-4", isbn: "", cover: "" },
-            { title: "營繕師異譚", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "夏日時光（完）", publisher: "東立", status: "已完結", max: 13, owned: "1-13", isbn: "", cover: "" },
-            { title: "非法稀有種（完）", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "" },
-            { title: "結界師(完全版）（完）", publisher: "東立", status: "已完結", max: 18, owned: "1-18", isbn: "", cover: "" },
-            { title: "排球少年（完）", publisher: "東立", status: "已完結", max: 45, owned: "1-45", isbn: "", cover: "" },
-            { title: "暗殺教室（完）", publisher: "東立", status: "已完結", max: 21, owned: "1-21", isbn: "", cover: "" },
-            { title: "奇巧計程車（完）", publisher: "東立", status: "已完結", max: 5, owned: "1-5", isbn: "", cover: "" },
-            { title: "通往奇巧計程車之路", publisher: "東立", status: "連載中", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "機器人宇宙（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "無實之花（上、中、下）（完）", publisher: "東立", status: "已完結", max: 3, owned: "1-3", isbn: "", cover: "" },
-            { title: "死亡筆記本（短篇集）（完）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "火影忍者 佐助列傳（上、下）（完）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "談無慾", publisher: "東立", status: "連載中", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "死囚醫生（完）", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "" },
-            { title: "章魚嗶的原罪（上＋下）（完）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "十年百忍（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "名偵探柯南 106", publisher: "東立", status: "連載中", max: 106, owned: "106", isbn: "", cover: "" },
-            { title: "葬送的芙莉蓮（小說）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "葬送的芙莉蓮 前奏", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "死神公式角色設定集", publisher: "東立", status: "已完結", max: 3, owned: "1-3", isbn: "", cover: "" },
-            { title: "噬謊者（完全版）", publisher: "尖端", status: "連載中", max: 6, owned: "1-6", isbn: "", cover: "" },
-            { title: "一百公尺（上＋下）（完）", publisher: "尖端", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "灌籃高手（完全版）（完）", publisher: "尖端", status: "已完結", max: 20, owned: "1-20", isbn: "", cover: "" },
-            { title: "REAL", publisher: "尖端", status: "連載中", max: 16, owned: "1-16", isbn: "", cover: "" },
-            { title: "噬魂者（完全版）", publisher: "尖端", status: "連載中", max: 10, owned: "1-10", isbn: "", cover: "" },
-            { title: "噬亡村", publisher: "尖端", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "" },
-            { title: "地。-關於地球的運動（完）", publisher: "尖端", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "" },
-            { title: "外天樓（全）", publisher: "尖端", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "來自深淵", publisher: "青文", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "" },
-            { title: "少年的深淵", publisher: "青文", status: "連載中", max: 16, owned: "1-16", isbn: "", cover: "" },
-            { title: "裏世界遠足", publisher: "青文", status: "連載中", max: 4, owned: "1-4", isbn: "", cover: "" },
-            { title: "失色的世界（完）", publisher: "青文", status: "已完結", max: 7, owned: "1-7", isbn: "", cover: "" },
-            { title: "我推的孩子（完）", publisher: "青文", status: "已完結", max: 16, owned: "1-16", isbn: "", cover: "" },
-            { title: "怪獸8號", publisher: "長鴻", status: "連載中", max: 15, owned: "1-15", isbn: "", cover: "" },
-            { title: "大黑暗", publisher: "長鴻", status: "連載中", max: 8, owned: "1-8", isbn: "", cover: "" },
-            { title: "錯位的青春（新裝版）（完）", publisher: "東販", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
-            { title: "零落（全）", publisher: "東販", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "虹之原（全）", publisher: "東販", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
-            { title: "閃電俠 閃點", publisher: "木馬文化", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" }
+            { title: "金牌得主", publisher: "東立", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "", author: "つるまいかだ" },
+            { title: "龍與變色龍", publisher: "東立", status: "連載中", max: 5, owned: "1-5", isbn: "", cover: "", author: "石山諒" },
+            { title: "鏈鋸人", publisher: "東立", status: "連載中", max: 22, owned: "1-22", isbn: "", cover: "", author: "藤本樹" },
+            { title: "妖精尾巴百年任務", publisher: "東立", status: "連載中", max: 17, owned: "1-17", isbn: "", cover: "", author: "真島浩" },
+            { title: "廢淵戰鬼", publisher: "東立", status: "連載中", max: 17, owned: "1-17", isbn: "", cover: "", author: "荒川弘" },
+            { title: "朱音落語", publisher: "東立", status: "連載中", max: 20, owned: "1-20", isbn: "", cover: "", author: "馬上鷹將" },
+            { title: "天國大魔境", publisher: "東立", status: "連載中", max: 11, owned: "1-11", isbn: "", cover: "", author: "石黑正數" },
+            { title: "膽大黨", publisher: "東立", status: "連載中", max: 22, owned: "1-22", isbn: "", cover: "", author: "龍幸伸" },
+            { title: "境界觸發者", publisher: "東立", status: "連載中", max: 29, owned: "1-29", isbn: "", cover: "", author: "葦原大介" },
+            { title: "葬送的芙莉蓮", publisher: "東立", status: "連載中", max: 15, owned: "1-15", isbn: "", cover: "", author: "山田鐘人" },
+            { title: "藍色時期", publisher: "東立", status: "連載中", max: 18, owned: "1-18", isbn: "", cover: "", author: "山口飛翔" },
+            { title: "青春之箱", publisher: "東立", status: "連載中", max: 23, owned: "1-23", isbn: "", cover: "", author: "三浦糀" },
+            { title: "板本日常", publisher: "東立", status: "連載中", max: 25, owned: "1-25", isbn: "", cover: "", author: "鈴木祐斗" },
+            { title: "炎炎消防隊（完）", publisher: "東立", status: "已完結", max: 34, owned: "1-34", isbn: "", cover: "", author: "大久保篤" },
+            { title: "炎拳（完）", publisher: "東立", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "", author: "藤本樹" },
+            { title: "驀然回首（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "藤本樹" },
+            { title: "再見繪梨（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "藤本樹" },
+            { title: "五等分的花嫁（完全版）", publisher: "東立", status: "已完結", max: 7, owned: "1-7", isbn: "", cover: "", author: "春場蔥" },
+            { title: "寄身獸（完全版）", publisher: "東立", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "", author: "岩明均" },
+            { title: "藤本樹短篇集 17-21、22-26", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "", author: "藤本樹" },
+            { title: "海波追尋的終幕", publisher: "東立", status: "連載中", max: 5, owned: "1-5", isbn: "", cover: "", author: "與左治" },
+            { title: "一之瀨家的大罪（完）", publisher: "東立", status: "已完結", max: 6, owned: "1-6", isbn: "", cover: "", author: "新井隆廣" },
+            { title: "cosmos銀河金融保險公司", publisher: "東立", status: "連載中", max: 4, owned: "1-4", isbn: "", cover: "", author: "田村隆平" },
+            { title: "營繕師異譚", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "小野不由美" },
+            { title: "夏日時光（完）", publisher: "東立", status: "已完結", max: 13, owned: "1-13", isbn: "", cover: "", author: "田中靖規" },
+            { title: "非法稀有種（完）", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "", author: "葦原大介" },
+            { title: "結界師(完全版）（完）", publisher: "東立", status: "已完結", max: 18, owned: "1-18", isbn: "", cover: "", author: "田邊伊衛郎" },
+            { title: "排球少年（完）", publisher: "東立", status: "已完結", max: 45, owned: "1-45", isbn: "", cover: "", author: "古舘春一" },
+            { title: "暗殺教室（完）", publisher: "東立", status: "已完結", max: 21, owned: "1-21", isbn: "", cover: "", author: "松井優征" },
+            { title: "奇巧計程車（完）", publisher: "東立", status: "已完結", max: 5, owned: "1-5", isbn: "", cover: "", author: "此元和津也" },
+            { title: "通往奇巧計程車之路", publisher: "東立", status: "連載中", max: 1, owned: "1", isbn: "", cover: "", author: "此元和津也" },
+            { title: "機器人宇宙（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "三浦糀" },
+            { title: "無實之花（上、中、下）（完）", publisher: "東立", status: "已完結", max: 3, owned: "1-3", isbn: "", cover: "", author: "新井隆廣" },
+            { title: "死亡筆記本（短篇集）（完）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "大場鶇/小畑健" },
+            { title: "火影忍者 佐助列傳（上、下）（完）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "", author: "岸本齊史" },
+            { title: "談無慾", publisher: "東立", status: "連載中", max: 2, owned: "1-2", isbn: "", cover: "", author: "霹靂布袋戲" },
+            { title: "死囚醫生（完）", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "", author: "佐藤祐紀" },
+            { title: "章魚嗶的原罪（上＋下）（完）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "", author: "泰山5億" },
+            { title: "十年百忍（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "不詳" },
+            { title: "名偵探柯南 106", publisher: "東立", status: "連載中", max: 106, owned: "106", isbn: "", cover: "", author: "青山剛昌" },
+            { title: "葬送的芙莉蓮（小說）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "", author: "八目迷" },
+            { title: "葬送的芙莉蓮 前奏", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "", author: "山田鐘人" },
+            { title: "死神公式角色設定集", publisher: "東立", status: "已完結", max: 3, owned: "1-3", isbn: "", cover: "", author: "久保帶人" },
+            { title: "噬謊者（完全版）", publisher: "尖端", status: "連載中", max: 6, owned: "1-6", isbn: "", cover: "", author: "迫稔雄" },
+            { title: "一百公尺（上＋下）（完）", publisher: "尖端", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "", author: "魚豊" },
+            { title: "灌籃高手（完全版）（完）", publisher: "尖端", status: "已完結", max: 20, owned: "1-20", isbn: "", cover: "", author: "井上雄彥" },
+            { title: "REAL", publisher: "尖端", status: "連載中", max: 16, owned: "1-16", isbn: "", cover: "", author: "井上雄彥" },
+            { title: "噬魂者（完全版）", publisher: "尖端", status: "連載中", max: 10, owned: "1-10", isbn: "", cover: "", author: "大久保篤" },
+            { title: "噬亡村", publisher: "尖端", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "", author: "二宮正明" },
+            { title: "地。-關於地球的運動（完）", publisher: "尖端", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "", author: "魚豊" },
+            { title: "外天樓（全）", publisher: "尖端", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "石黑正數" },
+            { title: "來自深淵", publisher: "青文", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "", author: "土筆章人" },
+            { title: "少年的深淵", publisher: "青文", status: "連載中", max: 16, owned: "1-16", isbn: "", cover: "", author: "峰浪りょう" },
+            { title: "裏世界遠足", publisher: "青文", status: "連載中", max: 4, owned: "1-4", isbn: "", cover: "", author: "宮澤伊織" },
+            { title: "失色的世界（完）", publisher: "青文", status: "已完結", max: 7, owned: "1-7", isbn: "", cover: "", author: "KENT" },
+            { title: "我推的孩子（完）", publisher: "青文", status: "已完結", max: 16, owned: "1-16", isbn: "", cover: "", author: "赤坂明/橫槍萌果" },
+            { title: "怪獸8號", publisher: "長鴻", status: "連載中", max: 15, owned: "1-15", isbn: "", cover: "", author: "松本直也" },
+            { title: "大黑暗", publisher: "長鴻", status: "連載中", max: 8, owned: "1-8", isbn: "", cover: "", author: "林田球" },
+            { title: "錯位的青春（新裝版）（完）", publisher: "東販", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "", author: "淺野一二三" },
+            { title: "零落（全）", publisher: "東販", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "淺野一二三" },
+            { title: "虹之原（全）", publisher: "東販", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "淺野一二三" },
+            { title: "閃電俠 閃點", publisher: "木馬文化", status: "已完結", max: 1, owned: "1", isbn: "", cover: "", author: "Geoff Johns" }
         ];
 
         let catalog = []; let wishlist = {}; let currentView = "collection"; let currentPublisher = "全部"; 
         let html5QrcodeScanner = null;
         let currentFacingMode = "environment"; 
 
-        // 🛠️ 新增：當使用者在搜尋框打字時觸發
         function handleSearchInput() {
             const inputVal = document.getElementById('search-input').value;
-            // 如果輸入框有內容，且目前不是「全部」分頁，且在「我的收藏」視角下
             if (inputVal.trim() !== "" && currentPublisher !== "全部" && currentView === "collection") {
-                currentPublisher = "全部"; // 強制切換回全部
-                renderTabs();              // 重新渲染頁籤外觀
+                currentPublisher = "全部"; 
+                renderTabs();              
             }
-            renderComics();                // 重新過濾名單
+            renderComics();                
         }
 
         function parseVolumes(str) {
@@ -277,9 +279,15 @@
             let localWish = localStorage.getItem('comic_wishlist_v3');
             catalog = localCat ? JSON.parse(localCat) : excelData;
             wishlist = localWish ? JSON.parse(localWish) : {};
+            
+            // 🛠️ 相容處理：若舊資料庫沒作者欄位，將基礎預填寫的作者洗進去，確保原網址不掉的前提下升級
             catalog.forEach(c => {
                 if(!c.status) c.status = "連載中";
                 if(!c.isbn) c.isbn = "";
+                if(c.author === undefined) {
+                    let foundDefault = excelData.find(d => d.title === c.title);
+                    c.author = foundDefault ? (foundDefault.author || "") : "";
+                }
             });
             saveToStorage(); updateWishlistBadge();
         }
@@ -474,7 +482,12 @@
             if (currentView === 'collection') {
                 let filtered = catalog.filter(comic => {
                     let matchPub = currentPublisher === "全部" || comic.publisher === currentPublisher;
-                    let matchSearch = comic.title.toLowerCase().includes(searchKeyword) || comic.publisher.toLowerCase().includes(searchKeyword);
+                    
+                    // 🛠️ 升級搜尋過濾條件：除了書名與出版社，同步支援搜尋「作者」名稱
+                    let comicAuthor = comic.author ? comic.author.toLowerCase() : "";
+                    let matchSearch = comic.title.toLowerCase().includes(searchKeyword) || 
+                                      comic.publisher.toLowerCase().includes(searchKeyword) ||
+                                      comicAuthor.includes(searchKeyword);
                     return matchPub && matchSearch;
                 });
                 if (filtered.length === 0) {
@@ -507,6 +520,9 @@
                             : `<p class="text-xs text-gray-500 mt-1">✨ 當前進度已滿 (${comic.max}集)</p>`;
                     }
 
+                    // 🛠️ 顯示作者標籤 (若有填寫才顯示)
+                    let authorHtml = comic.author ? `<p class="text-[11px] text-zinc-400 mt-0.5">✍️ ${comic.author}</p>` : "";
+
                     card.innerHTML = `
                         ${coverHtml}
                         <div class="flex-1 flex flex-col justify-between min-w-0 min-h-[96px] py-0.5">
@@ -518,6 +534,7 @@
                                     </h3>
                                     <span class="text-[10px] bg-[#2d2d2d] text-gray-400 px-1.5 py-0.5 rounded shrink-0">${comic.publisher}</span>
                                 </div>
+                                ${authorHtml}
                                 <p class="text-xs text-green-400 mt-0.5 truncate">持有：${formatVolumes(ownedArray)}</p>
                                 ${missingHtml}
                             </div>
@@ -565,10 +582,12 @@
             document.getElementById('stat-total-volumes').textContent = totalVol;
         }
 
+        // 🛠️ 打開新增視窗時，重置作者欄位
         function openAddModal() {
             document.getElementById('modal-title').textContent = "新增漫畫收藏";
-            document.getElementById('form-old-title').value = ""; // 清空舊紀錄
+            document.getElementById('form-old-title').value = ""; 
             document.getElementById('form-title').value = ""; document.getElementById('form-title').disabled = false;
+            document.getElementById('form-author').value = ""; // 清空作者
             document.getElementById('form-max').value = ""; document.getElementById('form-volumes').value = "";
             document.getElementById('form-isbn').value = ""; document.getElementById('form-status').value = "連載中";
             document.getElementById('form-cover-url').value = ""; document.getElementById('cover-preview').classList.add('hidden');
@@ -577,13 +596,14 @@
 
         function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
 
+        // 🛠️ 打開修改視窗時，載入漫畫填好的作者
         function editComic(title) {
             let comic = catalog.find(c => c.title === title); if (!comic) return;
             document.getElementById('modal-title').textContent = "修改漫畫資料";
-            // 🛠️ 解鎖書名輸入框，並將舊名字存在隱藏欄位，方便存檔時抓對原本的漫畫
             document.getElementById('form-old-title').value = comic.title; 
             document.getElementById('form-title').value = comic.title; 
             document.getElementById('form-title').disabled = false; 
+            document.getElementById('form-author').value = comic.author || ""; // 帶入現有作者
             
             document.getElementById('form-publisher').value = comic.publisher; document.getElementById('form-status').value = comic.status || "連載中";
             document.getElementById('form-max').value = comic.max || ""; document.getElementById('form-volumes').value = comic.owned;
@@ -593,9 +613,11 @@
             document.getElementById('add-modal').classList.remove('hidden');
         }
 
+        // 🛠️ 儲存時，連同作者欄位一起寫入資料庫
         function saveComic() {
             const oldTitle = document.getElementById('form-old-title').value.trim();
             const title = document.getElementById('form-title').value.trim(); 
+            const author = document.getElementById('form-author').value.trim(); // 取得新填寫的作者
             const publisher = document.getElementById('form-publisher').value;
             const status = document.getElementById('form-status').value; 
             const max = parseInt(document.getElementById('form-max').value) || 0;
@@ -608,17 +630,15 @@
             let ownedArray = parseVolumes(ownedRaw); 
             let formattedOwned = formatVolumes(ownedArray); 
             
-            // 🛠️ 調整修改儲存邏輯：先用隱藏的 oldTitle 尋找原本的漫畫
             let existingIndex = oldTitle ? catalog.findIndex(c => c.title === oldTitle) : -1;
             
             if (existingIndex > -1) {
-                // 如果連書名都改了，要同步更新待買清單 (wishlist) 裡的名字
                 if (oldTitle !== title && wishlist[oldTitle]) {
                     wishlist[title] = wishlist[oldTitle];
                     delete wishlist[oldTitle];
                 }
-                // 更新該本漫畫資料
-                catalog[existingIndex].title = title; // 寫入新書名
+                catalog[existingIndex].title = title; 
+                catalog[existingIndex].author = author; // 儲存作者
                 catalog[existingIndex].publisher = publisher; 
                 catalog[existingIndex].status = status;
                 catalog[existingIndex].max = max; 
@@ -626,13 +646,12 @@
                 catalog[existingIndex].cover = coverUrl; 
                 catalog[existingIndex].isbn = isbn;
             } else {
-                // 如果是全新新增，或是原本找不到
                 let dupCheck = catalog.findIndex(c => c.title === title);
                 if (dupCheck > -1) {
                     alert("⚠️ 書名與現有漫畫重複囉！");
                     return;
                 }
-                catalog.push({ title, publisher, status, max, owned: formattedOwned, cover: coverUrl, isbn });
+                catalog.push({ title, author, publisher, status, max, owned: formattedOwned, cover: coverUrl, isbn });
             }
             saveToStorage(); closeAddModal(); renderTabs(); renderComics();
         }
