@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>我的漫畫收藏</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="漫畫收藏">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluent/512/comic-book.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            -webkit-tap-highlight-color: transparent;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .active-tab {
+            border-bottom: 3px solid #ff4757;
+            color: #ff4757;
+        }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col h-screen font-sans overflow-hidden">
+
+    <header class="bg-[#1e1e1e] border-b border-[#2e2e2e] pt-4 pb-3 px-4 sticky top-0 z-10 shadow-md flex flex-col gap-3">
+        <div class="flex justify-between items-center">
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">📚 漫畫閣 <span class="text-xs text-gray-500 font-normal">v3.0</span></h1>
+            <div class="flex gap-2">
+                <button onclick="openScanner()" class="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-full text-xs font-bold transition-all shadow shadow-blue-900">
+                    📷 掃碼
+                </button>
+                <button onclick="openAddModal()" class="bg-[#ff4757] hover:bg-[#ff6b81] text-white px-3 py-2 rounded-full text-xs font-bold transition-all shadow">
+                    ➕ 新增
+                </button>
+                <button onclick="exportData()" class="bg-zinc-700 hover:bg-zinc-600 text-white p-2 rounded-full text-xs font-bold" title="備份資料">
+                    💾 備份
+                </button>
+                <button onclick="document.getElementById('import-file').click()" class="bg-zinc-700 hover:bg-zinc-600 text-white p-2 rounded-full text-xs font-bold" title="還原資料">
+                    📂 還原
+                </button>
+                <input type="file" id="import-file" class="hidden" accept=".json" onchange="importData(event)">
+            </div>
+        </div>
+        
+        <div class="flex gap-2">
+            <div class="relative flex-1">
+                <input type="text" id="search-input" oninput="renderComics()" placeholder="搜尋書名或出版社..." class="w-full bg-[#2d2d2d] text-white text-sm rounded-lg px-3 py-2 pl-9 focus:outline-none focus:ring-2 focus:ring-[#ff4757] border border-[#3e3e3e]">
+                <span class="absolute left-3 top-2.5 text-gray-500 text-sm">🔍</span>
+            </div>
+            <div class="bg-[#2d2d2d] rounded-lg p-0.5 flex border border-[#3e3e3e]">
+                <button id="view-collection-btn" onclick="switchView('collection')" class="px-3 py-1.5 text-xs rounded font-bold bg-[#ff4757] text-white">我的收藏</button>
+                <button id="view-wishlist-btn" onclick="switchView('wishlist')" class="px-3 py-1.5 text-xs rounded font-bold text-gray-400">🛒 待買 (<span id="wish-count">0</span>)</button>
+            </div>
+        </div>
+    </header>
+
+    <nav id="tab-container" class="bg-[#1a1a1a] flex gap-6 px-4 overflow-x-auto border-b border-[#2e2e2e] scrollbar-none text-sm font-medium sticky top-0 z-10">
+    </nav>
+
+    <main class="flex-1 overflow-y-auto p-4 bg-[#121212]">
+        <div id="comic-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            </div>
+    </main>
+
+    <footer class="bg-[#1e1e1e] border-t border-[#2e2e2e] p-4 text-center text-xs text-gray-400 flex justify-around shadow-inner">
+        <div>作品總數: <span id="stat-books" class="text-[#ff4757] font-bold text-sm">0</span> 部</div>
+        <div>已購總冊數: <span id="stat-total-volumes" class="text-green-400 font-bold text-sm">0</span> 本</div>
+    </footer>
+
+    <div id="add-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <h2 class="text-lg font-bold text-white mb-4" id="modal-title">新增/修改漫畫收藏</h2>
+            
+            <div class="flex flex-col gap-4 text-sm">
+                <div>
+                    <label class="block text-gray-400 mb-1">漫畫書名 *</label>
+                    <input type="text" id="form-title" placeholder="例如：鏈鋸人" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-gray-400 mb-1">出版社 *</label>
+                        <select id="form-publisher" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
+                            <option value="東立">東立</option>
+                            <option value="尖端">尖端</option>
+                            <option value="青文">青文</option>
+                            <option value="長鴻">長鴻</option>
+                            <option value="東販">東販</option>
+                            <option value="木馬文化">木馬文化</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">連載狀態</label>
+                        <select id="form-status" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
+                            <option value="連載中">連載中</option>
+                            <option value="已完結">已完結</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-gray-400 mb-1">預期最新/總集數</label>
+                        <input type="number" id="form-max" placeholder="例如：22" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">條碼編號 (ISBN)</label>
+                        <input type="text" id="form-isbn" placeholder="可掃描或輸入條碼" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">已持有集數 (支援寫範圍如 1-22)</label>
+                    <input type="text" id="form-volumes" placeholder="例如：1-13" class="w-full bg-[#2d2d2d] rounded p-2 text-white border border-[#3e3e3e]">
+                </div>
+                <div>
+                    <label class="block text-gray-400 mb-1">手動上傳封面圖</label>
+                    <input type="file" id="form-cover" accept="image/*" class="w-full bg-[#2d2d2d] rounded p-2 text-gray-400 border border-[#3e3e3e]">
+                    <div id="cover-preview" class="mt-2 hidden w-20 h-28 bg-gray-800 rounded overflow-hidden border border-gray-700"></div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 text-sm">
+                <button onclick="closeAddModal()" class="px-4 py-2 bg-gray-700 text-gray-200 rounded-lg">取消</button>
+                <button onclick="saveComic()" class="px-4 py-2 bg-[#ff4757] text-white rounded-lg font-bold">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scanner-modal" class="hidden fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-[#1e1e1e] p-4 rounded-2xl border border-gray-700">
+            <h3 class="text-white font-bold text-center mb-3">📸 掃描漫畫背面 ISBN 條碼</h3>
+            <div id="interactive" class="w-full bg-black rounded-lg overflow-hidden aspect-square"></div>
+            <p id="scanner-result" class="text-center text-xs text-gray-400 mt-2">正在啟動相機鏡頭...</p>
+            <div class="flex justify-center mt-4">
+                <button onclick="closeScanner()" class="px-6 py-2 bg-red-500 text-white rounded-lg font-bold text-sm">關閉鏡頭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化 62 部 Excel 完整原始資料
+        const excelData = [
+            { title: "金牌得主", publisher: "東立", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "" },
+            { title: "龍與變色龍", publisher: "東立", status: "連載中", max: 5, owned: "1-5", isbn: "", cover: "" },
+            { title: "鏈鋸人", publisher: "東立", status: "連載中", max: 22, owned: "1-22", isbn: "", cover: "" },
+            { title: "妖精尾巴百年任務", publisher: "東立", status: "連載中", max: 17, owned: "1-17", isbn: "", cover: "" },
+            { title: "廢淵戰鬼", publisher: "東立", status: "連載中", max: 17, owned: "1-17", isbn: "", cover: "" },
+            { title: "朱音落語", publisher: "東立", status: "連載中", max: 20, owned: "1-20", isbn: "", cover: "" },
+            { title: "天國大魔境", publisher: "東立", status: "連載中", max: 11, owned: "1-11", isbn: "", cover: "" },
+            { title: "膽大黨", publisher: "東立", status: "連載中", max: 22, owned: "1-22", isbn: "", cover: "" },
+            { title: "境界觸發者", publisher: "東立", status: "連載中", max: 29, owned: "1-29", isbn: "", cover: "" },
+            { title: "葬送的芙莉蓮", publisher: "東立", status: "連載中", max: 15, owned: "1-15", isbn: "", cover: "" },
+            { title: "藍色時期", publisher: "東立", status: "連載中", max: 18, owned: "1-18", isbn: "", cover: "" },
+            { title: "青春之箱", publisher: "東立", status: "連載中", max: 23, owned: "1-23", isbn: "", cover: "" },
+            { title: "板本日常", publisher: "東立", status: "連載中", max: 25, owned: "1-25", isbn: "", cover: "" },
+            { title: "炎炎消防隊（完）", publisher: "東立", status: "已完結", max: 34, owned: "1-34", isbn: "", cover: "" },
+            { title: "炎拳（完）", publisher: "東立", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "" },
+            { title: "驀然回首（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "再見繪梨（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "五等分的花嫁（完全版）", publisher: "東立", status: "已完結", max: 7, owned: "1-7", isbn: "", cover: "" },
+            { title: "寄身獸（完全版）", publisher: "東立", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "" },
+            { title: "藤本樹短篇集 17-21、22-26", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "海波追尋的終幕", publisher: "東立", status: "連載中", max: 5, owned: "1-5", isbn: "", cover: "" },
+            { title: "一之瀨家的大罪（完）", publisher: "東立", status: "已完結", max: 6, owned: "1-6", isbn: "", cover: "" },
+            { title: "cosmos銀河金融保險公司", publisher: "東立", status: "連載中", max: 4, owned: "1-4", isbn: "", cover: "" },
+            { title: "營繕師異譚", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "夏日時光（完）", publisher: "東立", status: "已完結", max: 13, owned: "1-13", isbn: "", cover: "" },
+            { title: "非法稀有種（完）", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "" },
+            { title: "結界師(完全版）（完）", publisher: "東立", status: "已完結", max: 18, owned: "1-18", isbn: "", cover: "" },
+            { title: "排球少年（完）", publisher: "東立", status: "已完結", max: 45, owned: "1-45", isbn: "", cover: "" },
+            { title: "暗殺教室（完）", publisher: "東立", status: "已完結", max: 21, owned: "1-21", isbn: "", cover: "" },
+            { title: "奇巧計程車（完）", publisher: "東立", status: "已完結", max: 5, owned: "1-5", isbn: "", cover: "" },
+            { title: "通往奇巧計程車之路", publisher: "東立", status: "連載中", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "機器人宇宙（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "無實之花（上、中、下）（完）", publisher: "東立", status: "已完結", max: 3, owned: "1-3", isbn: "", cover: "" },
+            { title: "死亡筆記本（短篇集）（完）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "火影忍者 佐助列傳（上、下）（完）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "談無慾", publisher: "東立", status: "連載中", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "死囚醫生（完）", publisher: "東立", status: "已完結", max: 4, owned: "1-4", isbn: "", cover: "" },
+            { title: "章魚嗶的原罪（上＋下）（完）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "十年百忍（全）", publisher: "東立", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "名偵探柯南 106", publisher: "東立", status: "連載中", max: 106, owned: "106", isbn: "", cover: "" },
+            { title: "葬送的芙莉蓮（小說）", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "葬送的芙莉蓮 前奏", publisher: "東立", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "死神公式角色設定集", publisher: "東立", status: "已完結", max: 3, owned: "1-3", isbn: "", cover: "" },
+            { title: "噬謊者（完全版）", publisher: "尖端", status: "連載中", max: 6, owned: "1-6", isbn: "", cover: "" },
+            { title: "一百公尺（上＋下）（完）", publisher: "尖端", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "灌籃高手（完全版）（完）", publisher: "尖端", status: "已完結", max: 20, owned: "1-20", isbn: "", cover: "" },
+            { title: "REAL", publisher: "尖端", status: "連載中", max: 16, owned: "1-16", isbn: "", cover: "" },
+            { title: "噬魂者（完全版）", publisher: "尖端", status: "連載中", max: 10, owned: "1-10", isbn: "", cover: "" },
+            { title: "噬亡村", publisher: "尖端", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "" },
+            { title: "地。-關於地球的運動（完）", publisher: "尖端", status: "已完結", max: 8, owned: "1-8", isbn: "", cover: "" },
+            { title: "外天樓（全）", publisher: "尖端", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "來自深淵", publisher: "青文", status: "連載中", max: 13, owned: "1-13", isbn: "", cover: "" },
+            { title: "少年的深淵", publisher: "青文", status: "連載中", max: 16, owned: "1-16", isbn: "", cover: "" },
+            { title: "裏世界遠足", publisher: "青文", status: "連載中", max: 4, owned: "1-4", isbn: "", cover: "" },
+            { title: "失色的世界（完）", publisher: "青文", status: "已完結", max: 7, owned: "1-7", isbn: "", cover: "" },
+            { title: "我推的孩子（完）", publisher: "青文", status: "已完結", max: 16, owned: "1-16", isbn: "", cover: "" },
+            { title: "怪獸8號", publisher: "長鴻", status: "連載中", max: 15, owned: "1-15", isbn: "", cover: "" },
+            { title: "大黑暗", publisher: "長鴻", status: "連載中", max: 8, owned: "1-8", isbn: "", cover: "" },
+            { title: "錯位的青春（新裝版）（完）", publisher: "東販", status: "已完結", max: 2, owned: "1-2", isbn: "", cover: "" },
+            { title: "零落（全）", publisher: "東販", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "虹之原（全）", publisher: "東販", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" },
+            { title: "閃電俠 閃點", publisher: "木馬文化", status: "已完結", max: 1, owned: "1", isbn: "", cover: "" }
+        ];
+
+        let catalog = [];
+        let wishlist = {}; // 格式： { "書名": [缺少的集數陣列] }
+        let currentView = "collection"; // collection 或 wishlist
+        let currentPublisher = "全部";
+        let tempCoverBase64 = "";
+        let html5QrcodeScanner = null;
+
+        function parseVolumes(str) {
+            if (!str) return [];
+            let result = new Set();
+            let normalized = String(str).replace(/~/g, '-').replace(/，/g, ',');
+            let parts = normalized.split(',');
+            parts.forEach(part => {
+                part = part.trim();
+                if (part.includes('-')) {
+                    let range = part.split('-');
+                    let start = parseInt(range[0]); let end = parseInt(range[1]);
+                    if (!isNaN(start) && !isNaN(end)) { for (let i = start; i <= end; i++) result.add(i); }
+                } else {
+                    let val = parseInt(part);
+                    if (!isNaN(val)) result.add(val);
+                    else if(part === "全" || part === "單" || part.includes("本") || part === "106") result.add(parseInt(part) || 1);
+                }
+            });
+            return Array.from(result).sort((a, b) => a - b);
+        }
+
+        function formatVolumes(arr) {
+            if (arr.length === 0) return "無持有";
+            let result = []; let start = arr[0], end = arr[0];
+            for (let i = 1; i < arr.length; i++) {
+                if (arr[i] === end + 1) { end = arr[i]; } 
+                else { result.push(start === end ? `${start}` : `${start}-${end}`); start = end = arr[i]; }
+            }
+            result.push(start === end ? `${start}` : `${start}-${end}`);
+            return result.join(', ');
+        }
+
+        function getMissingVolumes(ownedArr, max) {
+            if (!max || max <= 0) return [];
+            let missing = [];
+            for (let i = 1; i <= max; i++) { if (!ownedArr.includes(i)) missing.push(i); }
+            return missing;
+        }
+
+        // 讀取/儲存核心
+        function loadData() {
+            let localCat = localStorage.getItem('comic_catalog_v3');
+            let localWish = localStorage.getItem('comic_wishlist_v3');
+            
+            catalog = localCat ? JSON.parse(localCat) : excelData;
+            wishlist = localWish ? JSON.parse(localWish) : {};
+            
+            // 檢查補上新匯入欄位預設值
+            catalog.forEach(c => {
+                if(!c.status) c.status = "連載中";
+                if(!c.isbn) c.isbn = "";
+            });
+            saveToStorage();
+            updateWishlistBadge();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('comic_catalog_v3', JSON.stringify(catalog));
+            localStorage.setItem('comic_wishlist_v3', JSON.stringify(wishlist));
+            updateWishlistBadge();
+        }
+
+        function updateWishlistBadge() {
+            let totalWishItems = Object.values(wishlist).reduce((sum, arr) => sum + arr.length, 0);
+            document.getElementById('wish-count').textContent = totalWishItems;
+        }
+
+        // 切換主檢視分頁
+        function switchView(view) {
+            currentView = view;
+            const colBtn = document.getElementById('view-collection-btn');
+            const wishBtn = document.getElementById('view-wishlist-btn');
+            const tabs = document.getElementById('tab-container');
+
+            if (view === 'collection') {
+                colBtn.className = "px-3 py-1.5 text-xs rounded font-bold bg-[#ff4757] text-white";
+                wishBtn.className = "px-3 py-1.5 text-xs rounded font-bold text-gray-400";
+                tabs.classList.remove('hidden');
+            } else {
+                wishBtn.className = "px-3 py-1.5 text-xs rounded font-bold bg-amber-500 text-white";
+                colBtn.className = "px-3 py-1.5 text-xs rounded font-bold text-gray-400";
+                tabs.classList.add('hidden');
+            }
+            renderComics();
+        }
+
+        // 加入/移除待買清單
+        function toggleWishlistItem(title, vol) {
+            if (!wishlist[title]) wishlist[title] = [];
+            
+            if (wishlist[title].includes(vol)) {
+                wishlist[title] = wishlist[title].filter(v => v !== vol);
+                if (wishlist[title].length === 0) delete wishlist[title];
+            } else {
+                wishlist[title].push(vol);
+                wishlist[title].sort((a,b)=>a-b);
+            }
+            saveToStorage();
+            renderComics();
+        }
+
+        // 在待買清單中確認已購入
+        function buyWishlistItem(title, vol) {
+            let comic = catalog.find(c => c.title === title);
+            if (!comic) return;
+
+            let ownedArray = parseVolumes(comic.owned);
+            if (!ownedArray.includes(vol)) {
+                ownedArray.push(vol);
+                ownedArray.sort((a,b)=>a-b);
+                comic.owned = formatVolumes(ownedArray);
+            }
+
+            // 從待買清單移除
+            if (wishlist[title]) {
+                wishlist[title] = wishlist[title].filter(v => v !== vol);
+                if (wishlist[title].length === 0) delete wishlist[title];
+            }
+            saveToStorage();
+            renderComics();
+        }
+
+        // 快速加減集數
+        function quickAdjust(title, direction) {
+            let comic = catalog.find(c => c.title === title);
+            if (!comic) return;
+            let ownedArray = parseVolumes(comic.owned);
+
+            if (direction === 'plus') {
+                let nextVol = ownedArray.length === 0 ? 1 : Math.max(...ownedArray) + 1;
+                ownedArray.push(nextVol);
+                if (comic.max < nextVol) comic.max = nextVol;
+            } else if (direction === 'minus') {
+                if (ownedArray.length > 0) {
+                    let maxVol = Math.max(...ownedArray);
+                    ownedArray = ownedArray.filter(v => v !== maxVol);
+                }
+            }
+            comic.owned = formatVolumes(ownedArray);
+            saveToStorage();
+            renderComics();
+        }
+
+        // 備份功能（匯出 JSON）
+        function exportData() {
+            const dataStr = JSON.stringify({ catalog, wishlist }, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `漫畫閣備份_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // 還原功能（匯入 JSON）
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.catalog) {
+                        catalog = imported.catalog;
+                        wishlist = imported.wishlist || {};
+                        saveToStorage();
+                        renderTabs();
+                        renderComics();
+                        alert("🎉 資料還原成功！");
+                    } else { alert("檔案格式不符，無法還原"); }
+                } catch (err) { alert("讀取檔案出錯，請確認是否為正確的備份 JSON 檔"); }
+            };
+            reader.readAsText(file);
+        }
+
+        // 條碼相機掃描
+        function openScanner() {
+            document.getElementById('scanner-modal').classList.remove('hidden');
+            document.getElementById('scanner-result').textContent = "正在開啟鏡頭...";
+            
+            html5QrcodeScanner = new Html5Qrcode("interactive");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 120 } },
+                (decodedText) => {
+                    document.getElementById('scanner-result').textContent = `已辨識 ISBN: ${decodedText}`;
+                    // 搜尋現有漫畫是否有此 ISBN
+                    let matched = catalog.find(c => c.isbn === decodedText);
+                    setTimeout(() => {
+                        closeScanner();
+                        if (matched) {
+                            editComic(matched.title);
+                        } else {
+                            openAddModal();
+                            document.getElementById('form-isbn').value = decodedText;
+                            document.getElementById('form-title').placeholder = "新發現條碼！請輸入書名";
+                        }
+                    }, 800);
+                },
+                (errorMessage) => { /* 忽略持續偵測中的錯誤 */ }
+            ).catch(err => {
+                document.getElementById('scanner-result').textContent = "無法啟動相機，請確認瀏覽器有給予相機權限。";
+            });
+        }
+
+        function closeScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    document.getElementById('scanner-modal').classList.add('hidden');
+                }).catch(err => {
+                    document.getElementById('scanner-modal').classList.add('hidden');
+                });
+            } else {
+                document.getElementById('scanner-modal').classList.add('hidden');
+            }
+        }
+
+        // 渲染主功能
+        function renderTabs() {
+            const container = document.getElementById('tab-container');
+            const publishers = ["全部", "東立", "尖端", "青文", "長鴻", "東販", "木馬文化"];
+            container.innerHTML = '';
+            if (currentView !== 'collection') return;
+            
+            publishers.forEach(pub => {
+                let count = pub === "全部" ? catalog.length : catalog.filter(c => c.publisher === pub).length;
+                const btn = document.createElement('button');
+                btn.className = `py-3 px-2 whitespace-nowrap transition-colors ${currentPublisher === pub ? 'active-tab font-bold' : 'text-gray-400'}`;
+                btn.textContent = `${pub} (${count})`;
+                btn.onclick = () => { currentPublisher = pub; renderTabs(); renderComics(); };
+                container.appendChild(btn);
+            });
+        }
+
+        function renderComics() {
+            const listContainer = document.getElementById('comic-list');
+            const searchKeyword = document.getElementById('search-input').value.toLowerCase().trim();
+            listContainer.innerHTML = '';
+
+            if (currentView === 'collection') {
+                // 我的收藏渲染
+                let filtered = catalog.filter(comic => {
+                    let matchPub = currentPublisher === "全部" || comic.publisher === currentPublisher;
+                    let matchSearch = comic.title.toLowerCase().includes(searchKeyword) || comic.publisher.toLowerCase().includes(searchKeyword);
+                    return matchPub && matchSearch;
+                });
+
+                if (filtered.length === 0) {
+                    listContainer.innerHTML = `<div class="text-gray-500 text-center py-12 col-span-full">沒有找到相關漫畫 📚</div>`;
+                    return;
+                }
+
+                filtered.forEach(comic => {
+                    let ownedArray = parseVolumes(comic.owned);
+                    let missingArray = getMissingVolumes(ownedArray, comic.max);
+                    let isCompleted = comic.status === "已完結" && missingArray.length === 0;
+
+                    const card = document.createElement('div');
+                    card.className = "bg-[#1e1e1e] p-3 rounded-xl border border-[#2e2e2e] flex gap-3 shadow-md relative items-center";
+                    
+                    let coverHtml = comic.cover 
+                        ? `<img src="${comic.cover}" class="w-16 h-24 object-cover rounded shadow-inner bg-gray-800 shrink-0">`
+                        : `<div class="w-16 h-24 bg-gradient-to-br from-gray-700 to-gray-800 rounded flex items-center justify-center text-[10px] text-gray-500 text-center p-1 font-bold shrink-0">No Cover</div>`;
+
+                    // 生成點擊缺集加入待買清單的 UI
+                    let missingHtml = "";
+                    if (missingArray.length > 0) {
+                        missingHtml = `<p class="text-xs text-red-400 mt-0.5 font-medium">缺集 (點擊加購物車)：<br>`;
+                        missingArray.slice(0, 8).forEach(v => {
+                            let inWish = wishlist[comic.title] && wishlist[comic.title].includes(v);
+                            missingHtml += `<span onclick="toggleWishlistItem('${comic.title}', ${v})" class="inline-block px-1.5 py-0.5 rounded text-[10px] mr-1 mt-1 cursor-pointer font-bold ${inWish ? 'bg-amber-500 text-black' : 'bg-red-500/20 text-red-300 border border-red-500/30'}">${v}</span>`;
+                        });
+                        if(missingArray.length > 8) missingHtml += `<span class="text-[10px] text-gray-500">...</span>`;
+                        missingHtml += `</p>`;
+                    } else if (comic.max) {
+                        missingHtml = isCompleted 
+                            ? `<p class="text-xs text-yellow-400 mt-1 font-bold flex items-center gap-1">🏆 完美全套收集 (${comic.max}集全)</p>`
+                            : `<p class="text-xs text-gray-500 mt-1">✨ 當前進度已滿 (${comic.max}集)</p>`;
+                    }
+
+                    card.innerHTML = `
+                        ${coverHtml}
+                        <div class="flex-1 flex flex-col justify-between min-w-0 min-h-[96px] py-0.5">
+                            <div>
+                                <div class="flex justify-between items-start gap-1">
+                                    <h3 class="text-white font-bold text-sm truncate flex items-center gap-1">
+                                        ${comic.title}
+                                        <span class="text-[9px] px-1 py-0.2 rounded ${comic.status === '已完結' ? 'bg-purple-900/60 text-purple-300' : 'bg-sky-900/60 text-sky-300'}">${comic.status}</span>
+                                    </h3>
+                                    <span class="text-[10px] bg-[#2d2d2d] text-gray-400 px-1.5 py-0.5 rounded shrink-0">${comic.publisher}</span>
+                                </div>
+                                <p class="text-xs text-green-400 mt-0.5 truncate">持有：${formatVolumes(ownedArray)}</p>
+                                ${missingHtml}
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <div class="flex gap-2">
+                                    <button onclick="editComic('${comic.title}')" class="text-[11px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">修改</button>
+                                </div>
+                                <div class="flex items-center bg-[#2d2d2d] rounded-lg border border-[#3e3e3e] overflow-hidden">
+                                    <button onclick="quickAdjust('${comic.title}', 'minus')" class="px-2 py-0.5 text-sm text-gray-400 font-bold">-</button>
+                                    <span class="px-2 text-xs text-white font-mono min-w-[24px] text-center">${ownedArray.length}</span>
+                                    <button onclick="quickAdjust('${comic.title}', 'plus')" class="px-2 py-0.5 text-sm text-gray-400 font-bold">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(card);
+                });
+            } else {
+                // 購物/待買清單 渲染
+                let wishTitles = Object.keys(wishlist);
+                let count = 0;
+
+                wishTitles.forEach(title => {
+                    if (searchKeyword && !title.toLowerCase().includes(searchKeyword)) return;
+                    count++;
+                    const card = document.createElement('div');
+                    card.className = "bg-[#251f15] p-3 rounded-xl border border-amber-500/30 flex justify-between items-center shadow-md";
+                    
+                    let volsHtml = wishlist[title].map(v => {
+                        return `<button onclick="buyWishlistItem('${title}', ${v})" class="bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs px-2.5 py-1 rounded-md shadow mr-1.5 mt-1">✓ 第 ${v} 集已購</button>`;
+                    }).join('');
+
+                    card.innerHTML = `
+                        <div class="min-w-0 flex-1">
+                            <h4 class="text-amber-300 font-bold text-sm truncate">🛒 ${title}</h4>
+                            <p class="text-xs text-gray-400 mt-1">出門待補集數 (購買後點擊入庫)：</p>
+                            <div class="flex flex-wrap mt-1">${volsHtml}</div>
+                        </div>
+                        <button onclick="if(confirm('取消整部待買？')){delete wishlist['${title}']; saveToStorage(); renderComics();}" class="text-xs text-red-400 bg-red-500/10 p-2 rounded ml-2">全部取消</button>
+                    `;
+                    listContainer.appendChild(card);
+                });
+
+                if (count === 0) {
+                    listContainer.innerHTML = `<div class="text-gray-500 text-center py-12 col-span-full">🎉 太棒了！目前沒有缺少或待買的漫畫。</div>`;
+                }
+            }
+            calculateStats();
+        }
+
+        function calculateStats() {
+            document.getElementById('stat-books').textContent = catalog.length;
+            let totalVol = catalog.reduce((sum, comic) => sum + parseVolumes(comic.owned).length, 0);
+            document.getElementById('stat-total-volumes').textContent = totalVol;
+        }
+
+        // ================= 表單窗邏輯 =================
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = "新增漫畫收藏";
+            document.getElementById('form-title').value = ""; document.getElementById('form-title').disabled = false;
+            document.getElementById('form-max').value = ""; document.getElementById('form-volumes').value = "";
+            document.getElementById('form-isbn').value = ""; document.getElementById('form-status').value = "連載中";
+            document.getElementById('form-cover').value = ""; document.getElementById('cover-preview').classList.add('hidden');
+            tempCoverBase64 = ""; document.getElementById('add-modal').classList.remove('hidden');
+        }
+
+        function closeAddModal() { document.getElementById('add-modal').classList.add('hidden'); }
+
+        function editComic(title) {
+            let comic = catalog.find(c => c.title === title);
+            if (!comic) return;
+            
+            document.getElementById('modal-title').textContent = "修改漫畫資料";
+            document.getElementById('form-title').value = comic.title; document.getElementById('form-title').disabled = true;
+            document.getElementById('form-publisher').value = comic.publisher;
+            document.getElementById('form-status').value = comic.status || "連載中";
+            document.getElementById('form-max').value = comic.max || "";
+            document.getElementById('form-volumes').value = comic.owned;
+            document.getElementById('form-isbn').value = comic.isbn || "";
+            
+            const preview = document.getElementById('cover-preview');
+            if (comic.cover) {
+                preview.innerHTML = `<img src="${comic.cover}" class="w-full h-full object-cover">`;
+                preview.classList.remove('hidden'); tempCoverBase64 = comic.cover;
+            } else { preview.classList.add('hidden'); tempCoverBase64 = ""; }
+            
+            document.getElementById('add-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('form-cover').addEventListener('change', function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            if (file.size > 800 * 1024) { alert("請壓縮圖片至 800KB 以下再上傳。"); this.value = ""; return; }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                tempCoverBase64 = event.target.result;
+                const preview = document.getElementById('cover-preview');
+                preview.innerHTML = `<img src="${tempCoverBase64}" class="w-full h-full object-cover">`;
+                preview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function saveComic() {
+            const title = document.getElementById('form-title').value.trim();
+            const publisher = document.getElementById('form-publisher').value;
+            const status = document.getElementById('form-status').value;
+            const max = parseInt(document.getElementById('form-max').value) || 0;
+            const ownedRaw = document.getElementById('form-volumes').value.trim();
+            const isbn = document.getElementById('form-isbn').value.trim();
+
+            if (!title) { alert("請填寫漫畫書名！"); return; }
+
+            let ownedArray = parseVolumes(ownedRaw);
+            let formattedOwned = formatVolumes(ownedArray);
+            let existingIndex = catalog.findIndex(c => c.title === title);
+            
+            if (existingIndex > -1) {
+                catalog[existingIndex].publisher = publisher; catalog[existingIndex].status = status;
+                catalog[existingIndex].max = max; catalog[existingIndex].owned = formattedOwned;
+                catalog[existingIndex].cover = tempCoverBase64; catalog[existingIndex].isbn = isbn;
+            } else {
+                catalog.push({ title, publisher, status, max, owned: formattedOwned, cover: tempCoverBase64, isbn });
+            }
+
+            saveToStorage(); closeAddModal(); renderTabs(); renderComics();
+        }
+
+        window.onload = () => { loadData(); renderTabs(); renderComics(); };
+    </script>
+</body>
+</html>
